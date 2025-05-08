@@ -1,0 +1,5 @@
+-Modificare Funzione Target (Priorità e Corretta Scelta delle Caselle)
+-Morte e Abbandono dei nemici
+-Dispatch delle fasi di gioco (con eventuali invariati)
+-Iniziare a capire per validazione con e senza torrette
+-Iniziare Report
