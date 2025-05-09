@@ -5,10 +5,12 @@
 broadcast chan start;
 broadcast chan wave_started, final_position;
 broadcast chan enemy_in_range,spawned,configurated;
+urgent broadcast chan fire;
 
 int lp = 10;
+
 int first_attack=0;
-clock tower_clocl[7];
+
 
 const int N_CELLS = 7; // numero di celle verdi disponibili
 int current_target[N_CELLS]={-1,-1,-1,-1,-1,-1,-1};
@@ -92,7 +94,6 @@ int getTarget(int tid) {
     int bestId = -1;
     int i,dx,dy;
     int dist=1000;
-    tower_clocl[0]=0;
     for(i=0;i&lt;NUM_ENEMIES;i++){
         if (alive[i]==1 and left[i]==0){
             dx = TurretPosition[tid].x - positions[i].x;
@@ -292,6 +293,7 @@ isMain(positions[id].x + DX[dir], positions[id].y + DY[dir])</label>
 	<template>
 		<name>Tower</name>
 		<parameter>int id</parameter>
+		<declaration>clock f;</declaration>
 		<location id="id22" x="-586" y="-93">
 			<name x="-637" y="-127">Idle</name>
 		</location>
@@ -304,27 +306,28 @@ isMain(positions[id].x + DX[dir], positions[id].y + DY[dir])</label>
 		</location>
 		<location id="id25" x="-246" y="93">
 			<name x="-229" y="68">Ready</name>
-			<label kind="invariant" x="-255" y="110">getTarget(id)&lt;=0</label>
 		</location>
 		<init ref="id22"/>
 		<transition id="id26">
 			<source ref="id24"/>
 			<target ref="id24"/>
 			<label kind="guard" x="-824" y="178">getTarget(id)&gt;=0 and f &gt;=f_speed[turretType[id]]</label>
-			<label kind="assignment" x="-730" y="195">turretAttack(id), f := 0</label>
-			<nail x="-543" y="195"/>
+			<label kind="assignment" x="-722" y="212">turretAttack(id), f := 0</label>
+			<nail x="-544" y="178"/>
 			<nail x="-603" y="119"/>
 		</transition>
 		<transition id="id27">
 			<source ref="id24"/>
 			<target ref="id25"/>
-			<label kind="guard" x="-340" y="178">f &gt;=f_speed[turretType[id]] and getTarget(id)&lt;0</label>
-			<label kind="assignment" x="-331" y="195">f := 0</label>
+			<label kind="guard" x="-340" y="153">f &gt;=f_speed[turretType[id]] and getTarget(id)&lt;0</label>
+			<label kind="assignment" x="-221" y="170">f := 0</label>
 			<nail x="-383" y="182"/>
 		</transition>
 		<transition id="id28">
 			<source ref="id25"/>
 			<target ref="id24"/>
+			<label kind="guard" x="-442" y="25">getTarget(id)&gt;=0</label>
+			<label kind="synchronisation" x="-408" y="-8">fire!</label>
 			<label kind="assignment" x="-493" y="8">turretAttack(id), f := 0</label>
 			<nail x="-374" y="51"/>
 			<nail x="-433" y="68"/>
@@ -332,8 +335,8 @@ isMain(positions[id].x + DX[dir], positions[id].y + DY[dir])</label>
 		<transition id="id29">
 			<source ref="id23"/>
 			<target ref="id25"/>
-			<label kind="select" x="-221" y="-59">type : int[0,2]</label>
-			<label kind="synchronisation" x="-17" y="-8">configurated!</label>
+			<label kind="select" x="-221" y="-51">type : int[0,2]</label>
+			<label kind="synchronisation" x="-221" y="25">configurated!</label>
 			<label kind="assignment" x="-221" y="-34">TurretPosition[id] = green_cells[id],
 turretType[id] = type,
 used_cells[id] = true</label>
@@ -343,21 +346,6 @@ used_cells[id] = true</label>
 			<source ref="id22"/>
 			<target ref="id23"/>
 			<label kind="synchronisation" x="-561" y="-119">start?</label>
-		</transition>
-	</template>
-	<template>
-		<name>Debug</name>
-		<declaration>clock cl;</declaration>
-		<location id="id31" x="-297" y="0">
-		</location>
-		<location id="id32" x="-297" y="-170">
-			<label kind="invariant" x="-289" y="-153">cl&lt;5</label>
-		</location>
-		<init ref="id32"/>
-		<transition id="id33">
-			<source ref="id32"/>
-			<target ref="id31"/>
-			<label kind="guard" x="-297" y="-110">cl&gt;=4</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
@@ -379,5 +367,9 @@ Tower7=Tower(6);
 system User, Enemy1,Tower1;
 // Enemy2,Enemy3,Enemy4,Enemy5,Tower2,Tower3,Tower4,Tower5,Tower6,Tower7;</system>
 	<queries>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
 	</queries>
 </nta>
