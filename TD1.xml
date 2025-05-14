@@ -240,7 +240,7 @@ t:=0</label>
 	</template>
 	<template>
 		<name>Enemies</name>
-		<parameter>int id</parameter>
+		<parameter>int[0,NUM_ENEMIES-1] id</parameter>
 		<declaration>clock t;</declaration>
 		<location id="id9" x="-450" y="-425">
 			<name x="-460" y="-459">Idle</name>
@@ -354,7 +354,7 @@ and EnemyAlive[id]==true</label>
 	</template>
 	<template>
 		<name>Tower</name>
-		<parameter>int id</parameter>
+		<parameter>int[0,NUM_GREENCELLS-1] id</parameter>
 		<declaration>clock f,t;</declaration>
 		<location id="id27" x="-586" y="-93">
 			<name x="-603" y="-127">Idle</name>
@@ -428,26 +428,8 @@ t:=0</label>
 			<label kind="assignment" x="-467" y="-76">t:=0</label>
 		</transition>
 	</template>
-	<system>// Place template instantiations here.
-
-Tower1=Tower(0);
-Tower2=Tower(1);
-Tower3=Tower(2);
-Tower4=Tower(3);
-Tower5=Tower(4);
-Tower6=Tower(5);
-Tower7=Tower(6);
-
-Enemy1=Enemies(0);
-Enemy2=Enemies(1);
-Enemy3=Enemies(2);
-Enemy4=Enemies(3);
-Enemy5=Enemies(4);
-Enemy6=Enemies(5);
-
-
-
-system User, Enemy1, Enemy2,Enemy3,Enemy4,Enemy5,Enemy6,Tower1, Tower2,Tower3,Tower4,Tower5,Tower6,Tower7 ;</system>
+	<system>
+system  Enemies,Tower,User;</system>
 	<queries>
 		<query>
 			<formula/>
