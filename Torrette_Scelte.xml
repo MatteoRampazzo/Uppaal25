@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+//struct
+typedef struct {
+    int x;
+    int y;
+} Position;
+
+typedef struct {
+    int damage;
+    int range;
+    int f_speed;
+} TurretAttributes;
+
+typedef struct {
+    Position pos;
+    TurretAttributes att; 
+} Turret;
+
+
+//const
+const int N_TURRETS = 7;
+const int BASIC = 0;
+const int SNIPER = 1;
+const int CANNON = 2;
+
+const TurretAttributes BASIC_ATT = {2, 2, 2};
+const TurretAttributes CANNON_ATT = {5, 1, 7};
+const TurretAttributes SNIPER_ATT = {8, 4, 20};
+const Position AVAILABLE_TURRET_POSITION[N_TURRETS] = {{2,3},{5,5},{8,2},{8,6},{11,5},{14,2},{14,6}};
+
+const int NUM_ENEMIES = 2;
+const int NUM_CIRCLE = 0;
+const int NUM_SQUARE = 2;
+const int DX[4] = {1,-1, 0, 0}; // destra, sinistra, su, giù
+const int DY[4] = {0, 0,-1, 1};
+
+
+//chan
+broadcast chan place_Turrets;
+broadcast chan wave_started, final_position;
+broadcast chan enemy_in_range,configurated;
+urgent broadcast chan fire,enemy_defeated,tower_defeated,spawned,dead,tower_win;
+
+
+//var
+int MAP[8][16];
+Turret Turrets[N_TURRETS];
+Position AlreadyTakenCell[N_TURRETS];
+int TurretsPlaced=0;
+
+int MainLifePoints = 10;
+int NSpawnedCircle=0;
+int NSpawnedSquare=0;
+int CirclePreviousSpawn=0;
+int SquarePreviousSpawn=0;
+int EnemySpawnedTime[NUM_ENEMIES];
+int EnemyType[6];       // modificato: 5 -&gt; 6             //1 for circ 2 for square
+        // modificato: 5 -&gt; 6  
+   // modificato: 5 -&gt; 6
+int PATH_LENGTH = 10;
+int EnemyLeft[6];             // modificato: 5 -&gt; 6
+Position Positions[6];
+bool EnemyAlive[6]={true,true,true,true,true, true}; // per sapere se è ancora attivo
+int EnemyHealth[6];
+int EnemyPreviousX[5] ;
+int EnemyPreviousY[5] ;
+
+
+//function
+// velocità in ticks per ogni nemico (es: quanto deve aspettare tra un passo e l'altro)
+int getSpeed(int id) {
+    if (EnemyType[id] == 1)//circle
+        return 1;
+    else if (EnemyType[id] == 2)//square
+        return 3;
+    return 0;
+}
+
+bool isValid(int x, int y) {
+    return x &gt;= 0 &amp;&amp; x &lt; 8 &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; 16 &amp;&amp; MAP[x][y] == 1;
+}
+bool isMain(int x, int y) {
+    return x &gt;= 0 &amp;&amp; x &lt; 8 &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; 16 &amp;&amp; MAP[x][y] == 3;
+}
+
+int DamageTower(int id) {
+    if (EnemyType[id] == 1)      //circle
+        return 2;
+    else if (EnemyType[id] == 2) //square
+        return 4;
+    return 0;
+}
+
+void attackMainTower(int id) {
+    MainLifePoints -= DamageTower(id);
+}
+
+int getTarget(int tid) {
+    int minDist = 10000;
+    int bestId = -1;
+    int i,dx,dy;
+    int dist=1000;
+    for(i=0;i&lt;NUM_ENEMIES;i++){
+        if (EnemyAlive[i]==1 and EnemyLeft[i]==0){
+            dx = Turrets[tid].pos.x - Positions[i].x;
+            dy = Turrets[tid].pos.y - Positions[i].y;
+            dist = abs(dx) + abs(dy);
+        }
+
+        if (dist &lt;= Turrets[tid].att.range) {
+            // Square prioritization
+            return i;
+            }
+        }
+    return -2;
+}
+
+void turretAttack(int tid) {
+    int target = getTarget(tid);
+    if (target &gt;= 0) {
+        EnemyHealth[target] -= Turrets[tid].att.damage;
+        if (EnemyHealth[target] &lt;= 0) {
+            EnemyAlive[target] = 0;
+        }
+    }
+}
+</declaration>
+	<template>
+		<name>User</name>
+		<declaration>clock t;
+
+void setMap(){
+int j;
+    //Red Path
+    for(j=1;j&lt;5;j++){
+        MAP[j][0]=1;
+    }
+    for(j=0;j&lt;7;j++){
+        MAP[4][j]=1;
+    }
+    for(j=2;j&lt;7;j++){
+        MAP[j][7]=1;
+        MAP[j][15]=1;
+    }
+    for(j=7;j&lt;16;j++){
+        MAP[1][j]=1;
+        MAP[7][j]=1;
+    }
+    for(j=4;j&lt;7;j++){
+        MAP[j][10]=1;
+    }
+    for(j=11;j&lt;15;j++){
+        MAP[4][j]=1;
+    }
+
+    //Turrets
+    MAP[3][2]=2;
+    MAP[5][5]=2;
+    MAP[2][8]=2;
+    MAP[6][8]=2;
+    MAP[5][11]=2;
+    MAP[2][14]=2;
+    MAP[6][14]=2;
+
+    //Tower
+    MAP[4][15]=3;
+}</declaration>
+		<location id="id0" x="-892" y="-459">
+			<name x="-909" y="-493">Idle</name>
+			<label kind="invariant" x="-909" y="-442">t&lt;=0</label>
+		</location>
+		<location id="id1" x="-552" y="-459">
+			<name x="-603" y="-510">Configuration</name>
+			<label kind="invariant" x="-527" y="-484">TurretsPlaced&lt;=N_TURRETS</label>
+			<label kind="testcodeExit">setMap()</label>
+		</location>
+		<location id="id2" x="-552" y="-289">
+			<name x="-535" y="-297">Playing</name>
+		</location>
+		<location id="id3" x="-824" y="-289">
+			<name x="-884" y="-323">TowerDefeated</name>
+		</location>
+		<location id="id4" x="-552" y="-102">
+			<name x="-637" y="-136">TowerWin</name>
+		</location>
+		<init ref="id0"/>
+		<transition id="id5">
+			<source ref="id2"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-544" y="-238">MainLifePoints&gt;0 and 
+forall (i : int[0,NUM_ENEMIES-1]) (EnemyAlive[i] == false or EnemyLeft[i]==true)</label>
+			<label kind="synchronisation" x="-518" y="-195">tower_win!</label>
+		</transition>
+		<transition id="id6">
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-544" y="-408">TurretsPlaced&gt;=N_TURRETS</label>
+			<label kind="synchronisation" x="-544" y="-391">wave_started!</label>
+		</transition>
+		<transition id="id7">
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-714" y="-289">MainLifePoints&lt;=0</label>
+			<label kind="synchronisation" x="-714" y="-272">tower_defeated!</label>
+		</transition>
+		<transition id="id8">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-841" y="-484">place_Turrets!</label>
+			<label kind="assignment" x="-824" y="-450">setMap(),
+t:=0</label>
+			<nail x="-569" y="-459"/>
+		</transition>
+	</template>
+	<template>
+		<name>Enemies</name>
+		<parameter>int id</parameter>
+		<declaration>clock t;</declaration>
+		<location id="id9" x="-374" y="-348">
+			<name x="-384" y="-382">Idle</name>
+			<label kind="invariant" x="-416" y="-340">t&lt;=0</label>
+		</location>
+		<location id="id10" x="-34" y="-348">
+			<name x="-52" y="-382">Spawn</name>
+			<label kind="invariant" x="-8" y="-365">t&lt;=0</label>
+		</location>
+		<location id="id11" x="-42" y="-102">
+			<name x="-33" y="-93">Moving</name>
+			<label kind="invariant" x="-17" y="-127">t&lt;=getSpeed(id)</label>
+		</location>
+		<location id="id12" x="-280" y="-102">
+			<name x="-297" y="-136">Attack</name>
+			<label kind="invariant" x="-272" y="-93">t &lt;= getSpeed(id)</label>
+		</location>
+		<location id="id13" x="-280" y="-161">
+			<name x="-297" y="-195">Dead</name>
+		</location>
+		<location id="id14" x="-280" y="42">
+			<name x="-297" y="59">Left</name>
+		</location>
+		<location id="id15" x="-110" y="-229">
+			<label kind="invariant" x="-153" y="-221">t&lt;=SquarePreviousSpawn</label>
+		</location>
+		<location id="id16" x="42" y="-221">
+			<label kind="invariant" x="51" y="-212">t&lt;=CirclePreviousSpawn</label>
+		</location>
+		<init ref="id9"/>
+		<transition id="id17">
+			<source ref="id16"/>
+			<target ref="id11"/>
+			<label kind="guard" x="42" y="-195">t&gt;=CirclePreviousSpawn</label>
+			<label kind="assignment" x="34" y="-178">EnemySpawnedTime[id]=CirclePreviousSpawn,
+CirclePreviousSpawn+=2, t:=0</label>
+		</transition>
+		<transition id="id18">
+			<source ref="id10"/>
+			<target ref="id16"/>
+			<label kind="guard" x="25" y="-314">NSpawnedCircle&lt;NUM_CIRCLE</label>
+			<label kind="assignment" x="25" y="-297">NSpawnedCircle++,
+EnemyType[id]=1, EnemyHealth[id]=10,
+t:=0</label>
+		</transition>
+		<transition id="id19">
+			<source ref="id15"/>
+			<target ref="id11"/>
+			<label kind="guard" x="-153" y="-204">t&gt;=SquarePreviousSpawn</label>
+			<label kind="assignment" x="-204" y="-187">EnemySpawnedTime[id]=SquarePreviousSpawn,
+SquarePreviousSpawn+=3, t:=0</label>
+		</transition>
+		<transition id="id20">
+			<source ref="id10"/>
+			<target ref="id15"/>
+			<label kind="guard" x="-297" y="-323">NSpawnedSquare&lt;NUM_SQUARE</label>
+			<label kind="assignment" x="-297" y="-306">NSpawnedSquare++,
+EnemyType[id]=2, EnemyHealth[id]=20,
+t:=0</label>
+		</transition>
+		<transition id="id21">
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-425" y="-153">EnemyHealth[id]&lt;=0</label>
+			<label kind="synchronisation" x="-348" y="-136">dead!</label>
+			<nail x="-391" y="-102"/>
+		</transition>
+		<transition id="id22">
+			<source ref="id11"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-204" y="-153">EnemyHealth[id]&lt;=0</label>
+			<label kind="synchronisation" x="-187" y="-136">dead!</label>
+		</transition>
+		<transition id="id23">
+			<source ref="id12"/>
+			<target ref="id14"/>
+			<label kind="guard" x="-578" y="-42">t &gt;= getSpeed(id) and EnemyHealth[id]&gt;0</label>
+			<label kind="assignment" x="-408" y="-17">EnemyLeft[id]=1</label>
+		</transition>
+		<transition id="id24">
+			<source ref="id11"/>
+			<target ref="id11"/>
+			<label kind="select" x="263" y="-119">dir:int[0,3]</label>
+			<label kind="guard" x="264" y="-102">isValid(Positions[id].x + DX[dir], Positions[id].y + DY[dir]) &amp;&amp;
+!(Positions[id].x + DX[dir] == EnemyPreviousX[id] &amp;&amp; Positions[id].y + DY[dir] == EnemyPreviousY[id]) &amp;&amp;
+t &gt;= getSpeed(id) and !isMain(Positions[id].x + DX[dir], Positions[id].y + DY[dir]) and EnemyAlive[id]==true</label>
+			<label kind="assignment" x="272" y="-42">EnemyPreviousX[id] = Positions[id].x,
+EnemyPreviousY[id] = Positions[id].y,
+Positions[id].x += DX[dir],
+Positions[id].y += DY[dir],
+t:=0</label>
+			<nail x="-42" y="-68"/>
+			<nail x="34" y="-68"/>
+			<nail x="34" y="-102"/>
+		</transition>
+		<transition id="id25">
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="select" x="-246" y="-34">dir:int[0,3]</label>
+			<label kind="guard" x="-246" y="-17">t &gt;= getSpeed(id) and 
+isMain(Positions[id].x + DX[dir], Positions[id].y + DY[dir])
+and EnemyAlive[id]==true</label>
+			<label kind="assignment" x="-246" y="42">t:=0,attackMainTower(id)</label>
+		</transition>
+		<transition id="id26">
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="synchronisation" x="-246" y="-391">wave_started?</label>
+			<label kind="assignment" x="-246" y="-374">t:=0</label>
+		</transition>
+	</template>
+	<template>
+		<name>Tower</name>
+		<parameter>int id, int type, int x, int y</parameter>
+		<declaration>clock f;
+
+bool isAllowedPosition(int x, int y) {
+    int i;
+    int j;
+    bool allowed_position = false;
+    bool already_taken_position = false;
+    for (i = 0; i &lt; N_TURRETS; i++) {
+        if (AVAILABLE_TURRET_POSITION[i].x == x &amp;&amp; AVAILABLE_TURRET_POSITION[i].y == y){
+            allowed_position = true;
+            for (j = 0; j &lt; N_TURRETS; j++) {
+                if (AlreadyTakenCell[j].x == x &amp;&amp; AlreadyTakenCell[j].y == y){
+                    already_taken_position = true;
+                }
+            }
+        }
+    }
+    if (allowed_position == true &amp;&amp; already_taken_position == false)    
+        return true;
+    return false;
+}
+
+void place_turret(int id, int type, int x, int y) {
+    if (type==BASIC)
+        Turrets[id].att=BASIC_ATT;
+    else if (type==CANNON)
+        Turrets[id].att=CANNON_ATT;
+    else if (type==SNIPER)
+        Turrets[id].att=SNIPER_ATT;
+    else
+        return;
+    Turrets[id].pos.x = x;
+    Turrets[id].pos.y = y;
+    AlreadyTakenCell[id].x=x;
+    AlreadyTakenCell[id].y=y;
+}</declaration>
+		<location id="id27" x="-586" y="-178">
+			<name x="-620" y="-212">NotPlaced</name>
+		</location>
+		<location id="id28" x="-246" y="-178">
+			<name x="-289" y="-212">CheckPosition</name>
+		</location>
+		<location id="id29" x="-612" y="93">
+			<name x="-638" y="42">Attack</name>
+			<label kind="invariant" x="-731" y="59">f &lt;= Turrets[id].att.f_speed</label>
+		</location>
+		<location id="id30" x="-246" y="93">
+			<name x="-229" y="85">Ready</name>
+		</location>
+		<location id="id31" x="-246" y="-42">
+			<name x="-229" y="-51">Placed</name>
+		</location>
+		<init ref="id27"/>
+		<transition id="id32">
+			<source ref="id31"/>
+			<target ref="id30"/>
+			<label kind="synchronisation" x="-229" y="8">wave_started?</label>
+		</transition>
+		<transition id="id33">
+			<source ref="id28"/>
+			<target ref="id27"/>
+			<label kind="guard" x="-518" y="-102">!isAllowedPosition(x,y)</label>
+			<label kind="assignment" x="-518" y="-85">TurretsPlaced++</label>
+			<nail x="-425" y="-102"/>
+		</transition>
+		<transition id="id34">
+			<source ref="id28"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-229" y="-136">isAllowedPosition(x,y)</label>
+			<label kind="assignment" x="-229" y="-119">place_turret(id,type,x,y),
+TurretsPlaced++</label>
+		</transition>
+		<transition id="id35">
+			<source ref="id29"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-935" y="102">getTarget(id)&gt;=0 &amp;&amp; 
+f &gt;=Turrets[id].att.f_speed</label>
+			<label kind="assignment" x="-935" y="144">turretAttack(id), f := 0</label>
+			<nail x="-612" y="161"/>
+			<nail x="-714" y="161"/>
+			<nail x="-714" y="93"/>
+		</transition>
+		<transition id="id36">
+			<source ref="id29"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-493" y="212">f &gt;=Turrets[id].att.f_speed &amp;&amp; 
+getTarget(id)&lt;0</label>
+			<label kind="assignment" x="-493" y="254">f := 0</label>
+			<nail x="-510" y="195"/>
+			<nail x="-246" y="195"/>
+		</transition>
+		<transition id="id37">
+			<source ref="id30"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-442" y="51">getTarget(id)&gt;=0</label>
+			<label kind="synchronisation" x="-400" y="67">fire!</label>
+			<label kind="assignment" x="-485" y="34">turretAttack(id), f := 0</label>
+		</transition>
+		<transition id="id38">
+			<source ref="id27"/>
+			<target ref="id28"/>
+			<label kind="synchronisation" x="-476" y="-204">place_Turrets?</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+Enemy1=Enemies(0);
+Enemy2=Enemies(1);
+Enemy3=Enemies(2);
+Enemy4=Enemies(3);
+Enemy5=Enemies(4);
+Enemy6=Enemies(5);
+
+Tower1=Tower(0,BASIC,4,3);
+Tower2=Tower(1,SNIPER,5,5);
+Tower3=Tower(2,CANNON,8,2);
+Tower4=Tower(3,BASIC,8,6);
+Tower5=Tower(4,CANNON,11,5);
+Tower6=Tower(5,SNIPER,14,2);
+Tower7=Tower(6,CANNON,14,6);
+
+// List one or more processes to be composed into a system.
+system User,Enemy1,Tower1, Tower2,Tower3,Tower4,Tower5,Tower6,Tower7;
+// Enemy2,Enemy3,Enemy4,Enemy5,Tower2,Tower3,Tower4,Tower5,Tower6,Tower7;</system>
+	<queries>
+		<query>
+			<formula/>
+			<comment/>
+		</query>
+	</queries>
+</nta>

@@ -2,7 +2,7 @@
 <!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
 <nta>
 	<declaration>// Place global declarations here.
-broadcast chan start;
+broadcast chan place_turrets;
 urgent broadcast chan fire,tower_defeated,dead,tower_win;
 
 const int NUM_ENEMIES = 6;  
@@ -47,7 +47,7 @@ typedef struct {
 } Position;
 
 Position Positions[6];
-Position TurretPosition[7]; //Not very usefull can be replaced in GetTarget Function with greeNUM_GREENCELLS[id]
+Position TurretPosition[7]; //Not very usefull can be replaced in GetTarget Function with GreenCellsPositions[id]
 
 const int DX[4] = {1,-1, 0, 0}; // destra, sinistra, su, giù
 const int DY[4] = {0, 0,-1, 1};
@@ -172,7 +172,7 @@ int j;
     MAP[4][15]=3;
 }
 
-Position greeNUM_GREENCELLS[7] = {
+Position GreenCellsPositions[7] = {
  {3,2}, {5,5}, {2,8}, {6,8}, {5,11},{2,14},{6,14}
 };
 
@@ -191,8 +191,8 @@ void turretAttack(int tid) {
 		<name>User</name>
 		<declaration>clock t;</declaration>
 		<location id="id0" x="-765" y="-399">
-			<name x="-816" y="-408">Idle</name>
-			<label kind="invariant" x="-782" y="-433">t&lt;=0</label>
+			<name x="-824" y="-408">Idle</name>
+			<label kind="invariant" x="-775" y="-382">t&lt;=0</label>
 		</location>
 		<location id="id1" x="-552" y="-399">
 			<name x="-578" y="-442">configuration</name>
@@ -205,8 +205,8 @@ void turretAttack(int tid) {
 		<location id="id3" x="-824" y="-289">
 			<name x="-884" y="-323">TowerDefeated</name>
 		</location>
-		<location id="id4" x="-544" y="-110">
-			<name x="-629" y="-144">TowerWin</name>
+		<location id="id4" x="-552" y="-136">
+			<name x="-637" y="-170">TowerWin</name>
 		</location>
 		<init ref="id0"/>
 		<transition id="id5">
@@ -231,7 +231,7 @@ forall (i : int[0,NUM_ENEMIES-1])
 		<transition id="id8">
 			<source ref="id0"/>
 			<target ref="id1"/>
-			<label kind="synchronisation" x="-731" y="-416">start!</label>
+			<label kind="synchronisation" x="-731" y="-416">place_turrets!</label>
 			<label kind="assignment" x="-731" y="-399">setMap(),
 Initialization(),
 t:=0</label>
@@ -242,12 +242,12 @@ t:=0</label>
 		<name>Enemies</name>
 		<parameter>int[0,NUM_ENEMIES-1] id</parameter>
 		<declaration>clock t;</declaration>
-		<location id="id9" x="-450" y="-425">
-			<name x="-460" y="-459">Idle</name>
-			<label kind="invariant" x="-467" y="-416">t&lt;=0</label>
+		<location id="id9" x="-501" y="-425">
+			<name x="-511" y="-459">Idle</name>
+			<label kind="invariant" x="-518" y="-416">t&lt;=0</label>
 		</location>
-		<location id="id10" x="86" y="-425">
-			<name x="68" y="-459">Spawn</name>
+		<location id="id10" x="85" y="-425">
+			<name x="84" y="-459">Spawn</name>
 			<label kind="invariant" x="102" y="-442">t&lt;=0</label>
 		</location>
 		<location id="id11" x="93" y="-68">
@@ -256,19 +256,21 @@ t:=0</label>
 		</location>
 		<location id="id12" x="-204" y="76">
 			<name x="-272" y="68">Attack</name>
-			<label kind="invariant" x="-272" y="93">t &lt;= getSpeed(id)</label>
+			<label kind="invariant" x="-348" y="85">t &lt;= getSpeed(id)</label>
 		</location>
 		<location id="id13" x="-204" y="-68">
 			<name x="-221" y="-102">Dead</name>
 		</location>
 		<location id="id14" x="-204" y="187">
-			<name x="-221" y="204">EnemyLefted</name>
+			<name x="-238" y="204">EnemyLefted</name>
 		</location>
 		<location id="id15" x="-42" y="-246">
-			<label kind="invariant" x="-187" y="-255">t&lt;=SquarePreviousSpawn</label>
+			<name x="-93" y="-280">Square</name>
+			<label kind="invariant" x="-255" y="-255">t&lt;=SquarePreviousSpawn</label>
 		</location>
 		<location id="id16" x="221" y="-255">
-			<label kind="invariant" x="238" y="-263">t&lt;=CirclePreviousSpawn</label>
+			<name x="221" y="-289">Circle</name>
+			<label kind="invariant" x="246" y="-263">t&lt;=CirclePreviousSpawn</label>
 		</location>
 		<init ref="id9"/>
 		<transition id="id17">
@@ -289,23 +291,23 @@ t:=0</label>
 		<transition id="id19">
 			<source ref="id15"/>
 			<target ref="id11"/>
-			<label kind="guard" x="-238" y="-204">t&gt;=SquarePreviousSpawn</label>
-			<label kind="assignment" x="-229" y="-187">EnemySpawnedTime[id]=SquarePreviousSpawn,
+			<label kind="guard" x="-331" y="-204">t&gt;=SquarePreviousSpawn</label>
+			<label kind="assignment" x="-331" y="-187">EnemySpawnedTime[id]=SquarePreviousSpawn,
 SquarePreviousSpawn+=3, t:=0</label>
 		</transition>
 		<transition id="id20">
 			<source ref="id10"/>
 			<target ref="id15"/>
-			<label kind="guard" x="-263" y="-374">NSpawnedSquare&lt;NUM_SQUARE</label>
-			<label kind="assignment" x="-263" y="-357">NSpawnedSquare++,
+			<label kind="guard" x="-289" y="-374">NSpawnedSquare&lt;NUM_SQUARE</label>
+			<label kind="assignment" x="-289" y="-357">NSpawnedSquare++,
 EnemyType[id]=2, EnemyHealth[id]=20,
 t:=0</label>
 		</transition>
 		<transition id="id21">
 			<source ref="id12"/>
 			<target ref="id13"/>
-			<label kind="guard" x="-323" y="-25">EnemyHealth[id]&lt;=0</label>
-			<label kind="synchronisation" x="-323" y="-8">dead!</label>
+			<label kind="guard" x="-357" y="-25">EnemyHealth[id]&lt;=0</label>
+			<label kind="synchronisation" x="-357" y="-8">dead!</label>
 			<nail x="-204" y="0"/>
 		</transition>
 		<transition id="id22">
@@ -339,8 +341,8 @@ t:=0</label>
 		<transition id="id25">
 			<source ref="id11"/>
 			<target ref="id12"/>
-			<label kind="select" x="-119" y="-17">dir:int[0,3]</label>
-			<label kind="guard" x="-119" y="0">t &gt;= getSpeed(id) and 
+			<label kind="select" x="-110" y="-17">dir:int[0,3]</label>
+			<label kind="guard" x="-110" y="0">t &gt;= getSpeed(id) and 
 isMain(Positions[id].x + DX[dir], Positions[id].y + DY[dir])
 and EnemyAlive[id]==true</label>
 			<label kind="assignment" x="-119" y="59">t:=0,attackMainTower(id)</label>
@@ -348,84 +350,86 @@ and EnemyAlive[id]==true</label>
 		<transition id="id26">
 			<source ref="id9"/>
 			<target ref="id10"/>
-			<label kind="guard" x="-399" y="-450">forall (i : int[0,NUM_GREENCELLS-1]) GreenCellsOccupied[i] == 1</label>
+			<label kind="guard" x="-476" y="-442">forall (i : int[0,NUM_GREENCELLS-1]) GreenCellsOccupied[i] == 1</label>
 			<label kind="assignment" x="-238" y="-425">t:=0</label>
 		</transition>
 	</template>
 	<template>
 		<name>Tower</name>
 		<parameter>int[0,NUM_GREENCELLS-1] id</parameter>
-		<declaration>clock f,t;</declaration>
-		<location id="id27" x="-586" y="-93">
-			<name x="-603" y="-127">Idle</name>
+		<declaration>clock f,t;
+</declaration>
+		<location id="id27" x="-476" y="-153">
+			<name x="-493" y="-187">NotPlaced</name>
 		</location>
-		<location id="id28" x="-246" y="-93">
-			<name x="-297" y="-127">Configuration</name>
-			<label kind="invariant" x="-178" y="-127">t&lt;=0</label>
+		<location id="id28" x="-246" y="-153">
+			<name x="-289" y="-187">Configuration</name>
+			<label kind="invariant" x="-170" y="-187">t&lt;=0</label>
 		</location>
 		<location id="id29" x="-501" y="136">
 			<name x="-561" y="102">Attack</name>
-			<label kind="invariant" x="-756" y="127">f &lt;= TurretSpeed[TurretType[id]]</label>
+			<label kind="invariant" x="-799" y="119">f &lt;= TurretSpeed[TurretType[id]]</label>
 		</location>
 		<location id="id30" x="-246" y="127">
 			<name x="-229" y="102">Ready</name>
 		</location>
-		<location id="id31" x="-246" y="25">
-			<label kind="invariant" x="-289" y="-8">t&lt;=0</label>
+		<location id="id31" x="-246" y="-8">
+			<name x="-323" y="-34">Dispatch</name>
+			<label kind="invariant" x="-297" y="-17">t&lt;=0</label>
 		</location>
-		<location id="id32" x="110" y="25">
-			<name x="59" y="-9">TurretDisabled</name>
+		<location id="id32" x="102" y="-8">
+			<name x="51" y="-42">TurretDisabled</name>
 		</location>
 		<init ref="id27"/>
 		<transition id="id33">
 			<source ref="id31"/>
 			<target ref="id30"/>
-			<label kind="guard" x="-238" y="42">TurretType[id]!=0</label>
-			<label kind="assignment" x="-238" y="59">GreenCellsOccupied[id] = true</label>
+			<label kind="guard" x="-246" y="34">TurretType[id]!=0</label>
+			<label kind="assignment" x="-246" y="51">GreenCellsOccupied[id] = true</label>
 		</transition>
 		<transition id="id34">
 			<source ref="id31"/>
 			<target ref="id32"/>
-			<label kind="guard" x="-34" y="34">TurretType[id]==0</label>
-			<label kind="assignment" x="-34" y="51">GreenCellsOccupied[id] = true</label>
+			<label kind="guard" x="-119" y="-25">TurretType[id]==0</label>
+			<label kind="assignment" x="-170" y="-8">GreenCellsOccupied[id] = true</label>
 		</transition>
 		<transition id="id35">
 			<source ref="id28"/>
 			<target ref="id31"/>
-			<label kind="select" x="-238" y="-76">type : int[0,3]</label>
-			<label kind="assignment" x="-238" y="-59">TurretPosition[id] = greeNUM_GREENCELLS[id],
+			<label kind="select" x="-238" y="-127">type : int[0,3]</label>
+			<label kind="assignment" x="-238" y="-110">TurretPosition[id] = GreenCellsPositions[id],
 TurretType[id] = type,
 t:=0</label>
 		</transition>
 		<transition id="id36">
 			<source ref="id29"/>
 			<target ref="id29"/>
-			<label kind="guard" x="-833" y="187">getTarget(id)&gt;=0 and f &gt;=TurretSpeed[TurretType[id]]</label>
-			<label kind="assignment" x="-704" y="204">turretAttack(id), f := 0</label>
+			<label kind="guard" x="-858" y="187">getTarget(id)&gt;=0 and f &gt;=TurretSpeed[TurretType[id]]</label>
+			<label kind="assignment" x="-722" y="204">turretAttack(id), f := 0</label>
 			<nail x="-501" y="187"/>
-			<nail x="-551" y="187"/>
+			<nail x="-603" y="187"/>
 		</transition>
 		<transition id="id37">
 			<source ref="id29"/>
 			<target ref="id30"/>
-			<label kind="guard" x="-382" y="195">f &gt;=TurretSpeed[TurretType[id]] and getTarget(id)&lt;0</label>
-			<label kind="assignment" x="-374" y="212">f := 0</label>
+			<label kind="guard" x="-357" y="195">f &gt;=TurretSpeed[TurretType[id]] and getTarget(id)&lt;0</label>
+			<label kind="assignment" x="-357" y="212">f := 0</label>
 			<nail x="-374" y="204"/>
 		</transition>
 		<transition id="id38">
 			<source ref="id30"/>
 			<target ref="id29"/>
-			<label kind="guard" x="-450" y="42">getTarget(id)&gt;=0</label>
-			<label kind="synchronisation" x="-399" y="85">fire!</label>
-			<label kind="assignment" x="-493" y="25">turretAttack(id), f := 0</label>
+			<label kind="guard" x="-450" y="51">getTarget(id)&gt;=0</label>
+			<label kind="synchronisation" x="-399" y="76">fire!</label>
+			<label kind="assignment" x="-493" y="34">turretAttack(id), f := 0</label>
 			<nail x="-382" y="68"/>
 			<nail x="-382" y="68"/>
 		</transition>
 		<transition id="id39">
 			<source ref="id27"/>
 			<target ref="id28"/>
-			<label kind="synchronisation" x="-476" y="-93">start?</label>
-			<label kind="assignment" x="-467" y="-76">t:=0</label>
+			<label kind="synchronisation" x="-416" y="-170">place_turrets?</label>
+			<label kind="assignment" x="-374" y="-153">t:=0</label>
 		</transition>
 	</template>
 	<system>
